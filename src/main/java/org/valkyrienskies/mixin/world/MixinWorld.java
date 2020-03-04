@@ -92,6 +92,10 @@ public abstract class MixinWorld implements IWorldVS, ISubspaceProvider, IHasShi
     }
 
     private static boolean isBoundingBoxTooLarge(AxisAlignedBB alignedBB) {
+        // Temp for testing
+        if (true) {
+            return false;
+        }
         if ((alignedBB.maxX - alignedBB.minX) * (alignedBB.maxY - alignedBB.minY) * (alignedBB.maxZ
             - alignedBB.minZ) > BOUNDING_BOX_SIZE_LIMIT) {
             return true;
