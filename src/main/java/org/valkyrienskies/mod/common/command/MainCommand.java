@@ -134,7 +134,6 @@ public class MainCommand implements Runnable {
             if (!oEntity.isPresent()) {
                 throw new RuntimeException("QueryableShipData is incorrect?");
             }
-
             try {
                 PhysicsWrapperEntity wrapperEntity = (PhysicsWrapperEntity) oEntity.get();
                 BlockPos infuserPos = wrapperEntity.getPhysicsObject().getPhysicsInfuserPos();
