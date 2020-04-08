@@ -17,6 +17,7 @@ public class VSModCommandRegistry {
         manager.registerCommand(new VSCommandBase<>(MainCommand.class));
         manager.registerCommand(new PhysSettingsCommand());
         manager.registerCommand(new AirshipMapCommand());
+
     }
 
 }
