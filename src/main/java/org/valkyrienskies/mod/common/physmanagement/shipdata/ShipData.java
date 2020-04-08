@@ -95,6 +95,10 @@ public final class ShipData {
         }
     }
 
+    public void DestroyShip(){
+
+    }
+
     @Nullable
     public ShipPositionData getPositionData() {
         return positionData;

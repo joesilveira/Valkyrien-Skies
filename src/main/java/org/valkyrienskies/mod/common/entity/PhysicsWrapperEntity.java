@@ -189,6 +189,10 @@ public class PhysicsWrapperEntity extends Entity implements IEntityAdditionalSpa
         return physicsObject;
     }
 
+    public void destroyPhysicsObject(){
+        physicsObject.destroy();
+    }
+
     /**
      * Sets the position and rotation of the PhysicsWrapperEntity, and updates the pseudo ship AABB
      * (not the same as the actual collision one).

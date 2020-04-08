@@ -1,5 +1,6 @@
 package org.valkyrienskies.mod.common.command;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -35,7 +36,8 @@ import picocli.CommandLine.Spec;
         MainCommand.ListShips.class,
         MainCommand.DisableShip.class,
         MainCommand.GC.class,
-        MainCommand.TPS.class})
+        MainCommand.TPS.class,
+        MainCommand.KillRunaway.class})
 public class MainCommand implements Runnable {
 
     @Spec
@@ -201,6 +203,66 @@ public class MainCommand implements Runnable {
 
             sender.sendMessage(new TextComponentTranslation(
                 "commands.vs.list-ships.ships", listOfShips));
+        }
+
+    }
+
+    @Command(name = "kill-runaways", aliases = "kr")
+    static class KillRunaway implements Runnable {
+
+        @Inject
+        ICommandSender sender;
+
+        @Override
+        public void run() {
+            double posY;
+            int currentShipIterator;
+            World world = sender.getEntityWorld();
+            QueryableShipData data = ValkyrienUtils.getQueryableData(world);
+            List<ShipData> ships = data.getShips();
+            if (ships.size() == 0) {
+                // There are no ships
+                sender.sendMessage(new TextComponentTranslation("commands.vs.list-ships.noships"));
+                return;
+            }else{
+                for(currentShipIterator = 0; currentShipIterator < ships.size(); currentShipIterator++){
+                    ShipData currentShip = ships.get(currentShipIterator);
+                    assert currentShip.getPositionData() != null;
+                    posY = currentShip.getPositionData().getPosY();
+                    sender.sendMessage(new TextComponentTranslation(currentShip.getUUID().toString()));
+                    //463-464 (different each time, but always between these two numbers) seems to be an upper limit
+                    //on how high the Y variable goes for a ship in game (even though they can physically go higher
+                    // then that. This might be a bug that gets fixed later? Unsure...
+                    if((posY > 463 && posY < 464) || posY > 10000 || posY < -10000){
+                        Optional<ShipData> oTargetShipData = data.getShip(currentShip.getUUID());
+                        if(data.removeShip(currentShip.getUUID())){
+                            if (!oTargetShipData.isPresent()) {
+                                sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.failure", oTargetShipData.get().getUUID()));
+                                return;
+                            }
+                            ShipData targetShipData = oTargetShipData.get();
+                            Optional<Entity> oEntity = world.loadedEntityList.stream()
+                                    .filter(e -> e.getPersistentID().equals(targetShipData.getUUID()))
+                                    .findAny();
+                            if (!oEntity.isPresent()) {
+                                throw new RuntimeException("QueryableShipData is incorrect?");
+                            }
+                            try {
+                                PhysicsWrapperEntity wrapperEntity = (PhysicsWrapperEntity) oEntity.get();
+                                wrapperEntity.destroyPhysicsObject();
+                            }catch (ClassCastException e) {
+                                throw new RuntimeException("Ship entity is not PhysicsWrapperEntity or "
+                                        + "Physics infuser is not a physics infuser?", e);
+                            }
+                            sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.success", currentShip.getUUID()));
+                        }else{
+                            sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.failure", currentShip.getUUID()));
+                        }
+                    }
+                }
+            }
+            sender.sendMessage(new TextComponentTranslation("commands.vs.test"));
+            return;
         }
 
     }

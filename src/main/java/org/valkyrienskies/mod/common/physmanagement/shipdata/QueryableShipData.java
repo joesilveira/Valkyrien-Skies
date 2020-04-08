@@ -142,10 +142,18 @@ public class QueryableShipData implements Iterable<ShipData> {
         removeShip(wrapper.getPersistentID());
     }
 
-    public void removeShip(UUID uuid) {
+    public boolean removeShip(UUID uuid) {
         Optional<ShipData> shipOptional = getShip(uuid);
-
-        shipOptional.ifPresent(ship -> allShips.remove(ship));
+        Iterator<ShipData> ShipIterator = allShips.iterator();
+        if(shipOptional.isPresent()) {
+            while (ShipIterator.hasNext()) {
+                ShipData CurrentShip = ShipIterator.next();
+                if (CurrentShip.getUUID() == shipOptional.get().getUUID()) {
+                    allShips.remove(allShips.retrieve(equal(ShipData.UUID, uuid)).uniqueResult());
+                    return true;
+                }
+            }
+        }return false;
     }
 
     public void addShip(ShipData ship) {
