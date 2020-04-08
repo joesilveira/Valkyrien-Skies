@@ -137,7 +137,6 @@ public class QueryableShipData implements Iterable<ShipData> {
             return Optional.of(shipDataResultSet.uniqueResult());
         }
     }
-    //test
 
     public void removeShip(PhysicsWrapperEntity wrapper) {
         removeShip(wrapper.getPersistentID());
