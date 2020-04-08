@@ -3,6 +3,7 @@ package org.valkyrienskies.mod.common.command;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import net.minecraft.command.ICommandSender;
@@ -94,6 +95,29 @@ public class MainCommand implements Runnable {
         }
     }
 
+    @Command(name = "example", aliases = "ex",
+            synopsisSubcommandLabel = "COMMAND")
+    public static class ExampleCommand implements Runnable {
+        @Inject
+        ICommandSender sender;
+
+        @Parameters
+        String message;
+
+        @Option(names = "t")
+        String target;
+
+        @Override
+        public void run() {
+            if (target != null) {
+                sender.getEntityWorld().getPlayerEntityByName(target)
+                        .sendMessage(new TextComponentString(message));
+            } else {
+                sender.sendMessage(new TextComponentString(message));
+            }
+        }
+    }
+
     @Command(name = "ship-physics")
     static class DisableShip implements Runnable {
 
@@ -156,6 +180,8 @@ public class MainCommand implements Runnable {
         }
     }
 
+
+    //Joe Silveira
     @Command(name = "list-ships", aliases = "ls")
     static class ListShips implements Runnable {
 
@@ -167,6 +193,7 @@ public class MainCommand implements Runnable {
 
         @Override
         public void run() {
+
             World world = sender.getEntityWorld();
             QueryableShipData data = ValkyrienUtils.getQueryableData(world);
 
@@ -179,14 +206,22 @@ public class MainCommand implements Runnable {
             String listOfShips;
 
             if (verbose) {
+
                 listOfShips = data.getShips()
                     .stream()
                     .map(shipData -> {
+
+                        //if the ship position cant be found lets reload it or wipe it most likely network issue
                         if (shipData.getPositionData() == null) {
-                            // Unknown Location (this should be an error? TODO: look into this)
+                            UUID missingShipId = shipData.getUUID();
+                            if(data.getShip(missingShipId).isPresent()){
+                                ShipData tempShip = new ShipData.Builder().setUUID(missingShipId).build();
+                                tempShip.positionData = shipData.getPositionData();
+                                shipData.DestroyShip();
+                                return String.format("%s, Ship Reloading", shipData.getName());
+                            }
                             return String.format("%s, Unknown Location", shipData.getName());
                         } else {
-                            // Known Location
                             return String.format("%s [%.1f, %.1f, %.1f]", shipData.getName(),
                                 shipData.getPositionData().getPosX(),
                                 shipData.getPositionData().getPosY(),
@@ -203,6 +238,10 @@ public class MainCommand implements Runnable {
 
             sender.sendMessage(new TextComponentTranslation(
                 "commands.vs.list-ships.ships", listOfShips));
+
+            sender.sendMessage(new TextComponentTranslation("commands.message.usage"));
+
+
         }
 
     }
