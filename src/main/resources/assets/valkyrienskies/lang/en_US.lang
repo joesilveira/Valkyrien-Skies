@@ -28,7 +28,7 @@ gui.stop_align_ship=Stop Alignment
 commands.vs.list-ships.noships=This world contains no ships!
 commands.vs.list-ships.ships=This world contains the following ships: %s%n
 
-commands.vs.test=Hello
+commands.vs.to-ship.shipIdNotFound=Ship with ID %s not found
 
 commands.vs.kill-runaway.success=Successfully deleted ship of ID: %s
 commands.vs.kill-runaway.failure=Could not delete ship of ID: %s even though it was out of bounds

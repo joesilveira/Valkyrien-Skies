@@ -7,9 +7,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 
-import jdk.tools.jaotc.Main;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
@@ -41,7 +41,8 @@ import picocli.CommandLine.Spec;
                 MainCommand.GC.class,
                 MainCommand.ListShipsInactive.class,
                 MainCommand.TPS.class,
-                MainCommand.KillRunaway.class})
+                MainCommand.KillRunaway.class,
+                MainCommand.toShip.class})
 public class MainCommand implements Runnable {
 
     @Spec
@@ -287,6 +288,47 @@ public class MainCommand implements Runnable {
         }
     }
 
+    @Command(name = "to-ship", aliases = "ts")
+    static class toShip implements Runnable {
+
+        @Inject
+        ICommandSender sender;
+
+        @Parameters(index = "0")
+        String playerName;
+
+        @Parameters(index = "1")
+        UUID shipUUID;
+
+        // Will be used instead of UUID once I figure out how to name a ship (& test)
+        // @Parameters(index = "1", completionCandidates = ShipNameAutocompleter.class)
+        // String shipName;
+
+        @Override
+        public void run() {
+            World world = sender.getEntityWorld();
+            EntityPlayer player = world.getPlayerEntityByName(playerName);
+            QueryableShipData data = ValkyrienUtils.getQueryableData(world);
+            List<ShipData> ships = data.getShips();
+            for(ShipData ship : ships) {
+                if(ship.getUUID()/*getName()*/.equals(shipUUID/*shipName*/)){
+                    player.setPositionAndUpdate(
+                            ship.getPositionData().getPosX(),
+                            ship.getPositionData().getPosY(),
+                            ship.getPositionData().getPosZ());
+                }
+                else {
+                    sender.sendMessage(
+                            new TextComponentTranslation(
+                                    "commands.vs.to-ship.shipIdNotFound",
+                                    shipUUID));
+                }
+            }
+
+        }
+
+    }
+
     @Command(name = "kill-runaways", aliases = "kr")
     static class KillRunaway implements Runnable {
 
@@ -341,7 +383,6 @@ public class MainCommand implements Runnable {
                     }
                 }
             }
-            sender.sendMessage(new TextComponentTranslation("commands.vs.test"));
             return;
         }
 
