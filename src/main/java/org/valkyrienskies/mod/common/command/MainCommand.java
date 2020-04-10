@@ -351,11 +351,11 @@ public class MainCommand implements Runnable {
                     ShipData currentShip = ships.get(currentShipIterator);
                     assert currentShip.getPositionData() != null;
                     posY = currentShip.getPositionData().getPosY();
-                    sender.sendMessage(new TextComponentTranslation(currentShip.getUUID().toString()));
+                    //sender.sendMessage(new TextComponentTranslation(Double.toString(posY)));
                     //463-464 (different each time, but always between these two numbers) seems to be an upper limit
                     //on how high the Y variable goes for a ship in game (even though they can physically go higher
                     // then that. This might be a bug that gets fixed later? Unsure...
-                    if ((posY > 463 && posY < 464) || posY > 10000 || posY < -10000) {
+                    if ((posY > 460 && posY < 464) || posY > 10000 || posY < -10000) {
                         Optional<ShipData> oTargetShipData = data.getShip(currentShip.getUUID());
                         if (data.removeShip(currentShip.getUUID())) {
                             if (!oTargetShipData.isPresent()) {
