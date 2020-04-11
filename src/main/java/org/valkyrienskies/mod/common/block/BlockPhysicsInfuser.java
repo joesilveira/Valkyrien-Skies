@@ -3,6 +3,8 @@ package org.valkyrienskies.mod.common.block;
 import java.util.List;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+
+import javafx.geometry.Pos;
 import mcp.MethodsReturnNonnullByDefault;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -119,26 +121,21 @@ public class BlockPhysicsInfuser extends BlockVSDirectional implements ITileEnti
     public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing,
         float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer, EnumHand hand) {
         EnumFacing playerFacing = placer.getHorizontalFacing();
-        if (!placer.isSneaking()) {
-            playerFacing = playerFacing.getOpposite();
-        }
-
-        // Find the facing that's closest to what the player wanted.
         EnumFacing facingHorizontal;
+        // Find the facing that's closest to what the player wanted.
         if (canPlaceBlockAtWithFacing(worldIn, pos, playerFacing)) {
             facingHorizontal = playerFacing;
-        } else if (canPlaceBlockAtWithFacing(worldIn, pos, playerFacing.rotateY())) {
+        }else if (canPlaceBlockAtWithFacing(worldIn, pos, playerFacing.rotateY())) {
             facingHorizontal = playerFacing.rotateY();
         } else if (canPlaceBlockAtWithFacing(worldIn, pos, playerFacing.rotateYCCW())) {
-            facingHorizontal = playerFacing.rotateYCCW();
-        } else if (canPlaceBlockAtWithFacing(worldIn, pos, playerFacing.getOpposite())) {
             facingHorizontal = playerFacing.getOpposite();
-        } else {
+        } else if (canPlaceBlockAtWithFacing(worldIn, pos, playerFacing.getOpposite())) {
+            facingHorizontal = playerFacing.rotateYCCW();
+        }else {
             // There was no valid facing! How the did this method even get called!
             throw new IllegalStateException(
-                "Cannot find valid state for placement for Physics Infuser!");
+                    "Cannot find valid state for placement for Physics Infuser!");
         }
-
         return this.getDefaultState()
             .withProperty(FACING, facingHorizontal)
             .withProperty(INFUSER_LIGHT_ON, false);

@@ -237,8 +237,8 @@ public class TileEntityPhysicsInfuser extends TileEntity implements ITickable, I
                 .getDummyStateFacing(blockState);
             // First make the aabb for the main block, then include the dummy block, then include the bits coming out the top.
             return new AxisAlignedBB(getPos())
-                .expand(-sideFacing.getXOffset(), -sideFacing.getYOffset(),
-                    -sideFacing.getZOffset())
+                .expand(-sideFacing.getXOffset() * 2, -sideFacing.getYOffset() * 2,
+                    -sideFacing.getZOffset() * 2)
                 .expand(0, .3, 0);
         }
         // Default in case broken.
