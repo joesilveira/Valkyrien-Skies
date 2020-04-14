@@ -3,10 +3,13 @@ package org.valkyrienskies.mod.common.command;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
+
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
@@ -36,9 +39,11 @@ import picocli.CommandLine.Spec;
         MainCommand.ListShips.class,
         MainCommand.DisableShip.class,
         MainCommand.GC.class,
+        MainCommand.ListShipsInactive.class,
         MainCommand.TPS.class,
         MainCommand.KillRunaway.class,
-        MainCommand.DeleteShip.class})
+        MainCommand.DeleteShip.class,
+        MainCommand.toShip.class})
 public class MainCommand implements Runnable {
 
     @Spec
@@ -95,6 +100,7 @@ public class MainCommand implements Runnable {
         }
     }
 
+
     @Command(name = "ship-physics")
     static class DisableShip implements Runnable {
 
@@ -130,7 +136,6 @@ public class MainCommand implements Runnable {
             if (!oEntity.isPresent()) {
                 throw new RuntimeException("QueryableShipData is incorrect?");
             }
-
             try {
                 PhysicsWrapperEntity wrapperEntity = (PhysicsWrapperEntity) oEntity.get();
                 BlockPos infuserPos = wrapperEntity.getPhysicsObject().getPhysicsInfuserPos();
@@ -157,6 +162,8 @@ public class MainCommand implements Runnable {
         }
     }
 
+
+    //Joe Silveira list all ships
     @Command(name = "list-ships", aliases = "ls")
     static class ListShips implements Runnable {
 
@@ -168,6 +175,7 @@ public class MainCommand implements Runnable {
 
         @Override
         public void run() {
+
             World world = sender.getEntityWorld();
             QueryableShipData data = ValkyrienUtils.getQueryableData(world);
 
@@ -180,18 +188,26 @@ public class MainCommand implements Runnable {
             String listOfShips;
 
             if (verbose) {
+
                 listOfShips = data.getShips()
                     .stream()
                     .map(shipData -> {
+
+                        //if the ship position cant be found lets reload it or wipe it most likely network issue
                         if (shipData.getPositionData() == null) {
-                            // Unknown Location (this should be an error? TODO: look into this)
+                            UUID missingShipId = shipData.getUUID();
+                            if (data.getShip(missingShipId).isPresent()) {
+                                ShipData tempShip = new ShipData.Builder().setUUID(missingShipId).build();
+                                tempShip.positionData = shipData.getPositionData();
+                                shipData.DestroyShip();
+                                return String.format("%s, Ship Reloading", shipData.getName());
+                            }
                             return String.format("%s, Unknown Location", shipData.getName());
                         } else {
-                            // Known Location
-                            return String.format("%s [%.1f, %.1f, %.1f]", shipData.getName(),
-                                shipData.getPositionData().getPosX(),
-                                shipData.getPositionData().getPosY(),
-                                shipData.getPositionData().getPosZ());
+                            return String.format("%s [%s, %s, %s]", shipData.getName(),
+                                String.valueOf(shipData.getPositionData().getPosX()),
+                                String.valueOf(shipData.getPositionData().getPosY()),
+                                String.valueOf(shipData.getPositionData().getPosZ()));
                         }
                     })
                     .collect(Collectors.joining(",\n"));
@@ -204,8 +220,112 @@ public class MainCommand implements Runnable {
 
             sender.sendMessage(new TextComponentTranslation(
                 "commands.vs.list-ships.ships", listOfShips));
+
+            sender.sendMessage(new TextComponentTranslation("commands.message.usage"));
+
+
         }
 
+    }
+
+    //Joe Silveira list all inactive ships
+    @Command(name = "list-ships-inactive", aliases = "lsi")
+    static class ListShipsInactive implements Runnable {
+
+        @Inject
+        ICommandSender sender;
+
+        String message;
+
+        @Option(names = {"-v", "--verbose"})
+        boolean verbose;
+
+        @Override
+        public void run() {
+
+            World world = sender.getEntityWorld();
+            QueryableShipData data = ValkyrienUtils.getQueryableData(world);
+
+            if (data.getShips().size() == 0) {
+                // There are no ships
+                sender.sendMessage(new TextComponentTranslation("commands.vs.list-ships.noships"));
+                return;
+            }
+
+            String listOfShips;
+
+            if (verbose) {
+
+                listOfShips = data.getShips()
+                    .stream()
+                    .map(shipData -> {
+
+                        //if the ship position cant be found lets reload it or wipe it most likely network issue
+                        if (shipData.getPositionData() == null) {
+                            UUID missingShipId = shipData.getUUID();
+                            if (data.getShip(missingShipId).isPresent()) {
+                                ShipData tempShip = new ShipData.Builder().setUUID(missingShipId).build();
+                                tempShip.positionData = shipData.getPositionData();
+                                shipData.DestroyShip();
+                                return String.format("%s, Ship Reloading", shipData.getName());
+                            }
+                            return String.format("%s, Unknown Location", shipData.getName());
+                        } else if (shipData.getPositionData().getPosX() == 0 && shipData.getPositionData().getPosY() == 0 && shipData.getPositionData().getPosZ() == 0) {
+                            return String.format("%s, Ship Inactive", shipData.getName());
+                        }
+                        return String.format("%s, No Ships Inactive");
+
+                    })
+                    .collect(Collectors.joining(",\n"));
+
+                message = "Ships inactive:";
+                sender.sendMessage(new TextComponentTranslation(
+                    message, listOfShips));
+
+                sender.sendMessage(new TextComponentTranslation(message));
+
+            }
+
+        }
+    }
+
+    @Command(name = "to-ship", aliases = "ts")
+    static class toShip implements Runnable {
+
+        @Inject
+        ICommandSender sender;
+
+        @Parameters(index = "0")
+        String playerName;
+
+        @Parameters(index = "1")
+        UUID shipUUID;
+
+        // Will be used instead of UUID once I figure out how to name a ship (& test)
+        // @Parameters(index = "1", completionCandidates = ShipNameAutocompleter.class)
+        // String shipName;
+
+        @Override
+        public void run() {
+            World world = sender.getEntityWorld();
+            EntityPlayer player = world.getPlayerEntityByName(playerName);
+            QueryableShipData data = ValkyrienUtils.getQueryableData(world);
+            List<ShipData> ships = data.getShips();
+            for(ShipData ship : ships) {
+                if(ship.getUUID()/*getName()*/.equals(shipUUID/*shipName*/)){
+                    player.setPositionAndUpdate(
+                        ship.getPositionData().getPosX(),
+                        ship.getPositionData().getPosY(),
+                        ship.getPositionData().getPosZ());
+                }
+                else {
+                    sender.sendMessage(
+                        new TextComponentTranslation(
+                            "commands.vs.to-ship.shipIdNotFound",
+                            shipUUID));
+                }
+            }
+        }
     }
 
     @Command(name = "kill-runaways", aliases = "kr")
@@ -224,15 +344,12 @@ public class MainCommand implements Runnable {
             if (ships.size() == 0) {
                 // There are no ships
                 sender.sendMessage(new TextComponentTranslation("commands.vs.list-ships.noships"));
-                return;
             } else {
-                for (currentShipIterator = 0; currentShipIterator < ships.size();
-                    currentShipIterator++) {
+                for (currentShipIterator = 0; currentShipIterator < ships.size(); currentShipIterator++) {
                     ShipData currentShip = ships.get(currentShipIterator);
                     assert currentShip.getPositionData() != null;
                     posY = currentShip.getPositionData().getPosY();
-                    sender.sendMessage(
-                        new TextComponentTranslation(currentShip.getUUID().toString()));
+                    sender.sendMessage(new TextComponentTranslation(currentShip.getUUID().toString()));
                     //463-464 (different each time, but always between these two numbers) seems to be an upper limit
                     //on how high the Y variable goes for a ship in game (even though they can physically go higher
                     // then that. This might be a bug that gets fixed later? Unsure...
@@ -240,9 +357,7 @@ public class MainCommand implements Runnable {
                         Optional<ShipData> oTargetShipData = data.getShip(currentShip.getUUID());
                         if (data.removeShip(currentShip.getUUID())) {
                             if (!oTargetShipData.isPresent()) {
-                                sender.sendMessage(
-                                    new TextComponentTranslation("commands.vs.kill-runaway.failure",
-                                        oTargetShipData.get().getUUID()));
+                                sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.failure", oTargetShipData.get().getUUID()));
                                 return;
                             }
                             ShipData targetShipData = oTargetShipData.get();
@@ -253,27 +368,19 @@ public class MainCommand implements Runnable {
                                 throw new RuntimeException("QueryableShipData is incorrect?");
                             }
                             try {
-                                PhysicsWrapperEntity wrapperEntity = (PhysicsWrapperEntity) oEntity
-                                    .get();
+                                PhysicsWrapperEntity wrapperEntity = (PhysicsWrapperEntity) oEntity.get();
                                 wrapperEntity.destroyPhysicsObject();
                             } catch (ClassCastException e) {
-                                throw new RuntimeException(
-                                    "Ship entity is not PhysicsWrapperEntity or "
-                                        + "Physics infuser is not a physics infuser?", e);
+                                throw new RuntimeException("Ship entity is not PhysicsWrapperEntity or "
+                                    + "Physics infuser is not a physics infuser?", e);
                             }
-                            sender.sendMessage(
-                                new TextComponentTranslation("commands.vs.kill-runaway.success",
-                                    currentShip.getUUID()));
+                            sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.success", currentShip.getUUID()));
                         } else {
-                            sender.sendMessage(
-                                new TextComponentTranslation("commands.vs.kill-runaway.failure",
-                                    currentShip.getUUID()));
+                            sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.failure", currentShip.getUUID()));
                         }
                     }
                 }
             }
-            sender.sendMessage(new TextComponentTranslation("commands.vs.test"));
-            return;
         }
     }
 
@@ -283,35 +390,56 @@ public class MainCommand implements Runnable {
         @Inject
         ICommandSender sender;
 
-        @Parameters(index = "0", completionCandidates = ShipNameAutocompleter.class)
-        String shipName;
+        @Parameters(index = "0")
+        UUID shipUUID;
+
+        // Will be used instead of UUID once I figure out how to name a ship (& test)
+        // @Parameters(index = "1", completionCandidates = ShipNameAutocompleter.class)
+        // String shipName;
 
         @Override
         public void run() {
+            int currentShipIterator;
             World world = sender.getEntityWorld();
-            QueryableShipData data = QueryableShipData.get(world);
-            Optional<ShipData> oTargetShipData = data.getShipFromName(shipName);
+            QueryableShipData data = ValkyrienUtils.getQueryableData(world);
+            List<ShipData> ships = data.getShips();
+            if (ships.size() == 0) {
+                // There are no ships
+                sender.sendMessage(new TextComponentTranslation("commands.vs.list-ships.noships"));
+            } else {
+                for (currentShipIterator = 0; currentShipIterator < ships.size(); currentShipIterator++) {
+                    ShipData currentShip = ships.get(currentShipIterator);
+                    assert currentShip.getPositionData() != null;
+                    sender.sendMessage(new TextComponentTranslation(currentShip.getUUID().toString()));
+                    //HERE
 
-            if (!oTargetShipData.isPresent()) {
-                sender.sendMessage(new TextComponentString(
-                    "That ship, " + shipName + " could not be found"));
-                return;
-            }
-
-            ShipData targetShipData = oTargetShipData.get();
-            Optional<Entity> oEntity = world.loadedEntityList.stream()
-                .filter(e -> e.getPersistentID().equals(targetShipData.getUUID()))
-                .findAny();
-
-            if (!oEntity.isPresent()) {
-                throw new RuntimeException("QueryableShipData is incorrect?");
-            }
-            try {
-                PhysicsWrapperEntity wrapperEntity = (PhysicsWrapperEntity) oEntity.get();
-                wrapperEntity.destroyPhysicsObject();
-            } catch (ClassCastException e) {
-                throw new RuntimeException("Ship entity is not PhysicsWrapperEntity or "
-                    + "Physics infuser is not a physics infuser?", e);
+                    if (currentShip.getUUID().equals(shipUUID)) {
+                        Optional<ShipData> oTargetShipData = data.getShip(currentShip.getUUID());
+                        if (data.removeShip(currentShip.getUUID())) {
+                            if (!oTargetShipData.isPresent()) {
+                                sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.failure", oTargetShipData.get().getUUID()));
+                                return;
+                            }
+                            ShipData targetShipData = oTargetShipData.get();
+                            Optional<Entity> oEntity = world.loadedEntityList.stream()
+                                .filter(e -> e.getPersistentID().equals(targetShipData.getUUID()))
+                                .findAny();
+                            if (!oEntity.isPresent()) {
+                                throw new RuntimeException("QueryableShipData is incorrect?");
+                            }
+                            try {
+                                PhysicsWrapperEntity wrapperEntity = (PhysicsWrapperEntity) oEntity.get();
+                                wrapperEntity.destroyPhysicsObject();
+                            } catch (ClassCastException e) {
+                                throw new RuntimeException("Ship entity is not PhysicsWrapperEntity or "
+                                    + "Physics infuser is not a physics infuser?", e);
+                            }
+                            sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.success", currentShip.getUUID()));
+                        } else {
+                            sender.sendMessage(new TextComponentTranslation("commands.vs.kill-runaway.failure", currentShip.getUUID()));
+                        }
+                    }
+                }
             }
         }
     }
