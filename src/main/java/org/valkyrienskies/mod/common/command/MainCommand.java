@@ -43,6 +43,7 @@ import picocli.CommandLine.Spec;
         MainCommand.TPS.class,
         MainCommand.KillRunaway.class,
         MainCommand.DeleteShip.class,
+        MainCommand.debug.class,
         MainCommand.toShip.class})
 public class MainCommand implements Runnable {
 
@@ -97,6 +98,20 @@ public class MainCommand implements Runnable {
                 sender.sendMessage(new TextComponentString(
                     "Player world: " + ticksPerSecondTwoDecimals + " physics ticks per second"));
             }
+        }
+    }
+
+    @Command(name = "debug")
+    static class debug implements Runnable {
+
+        @Inject
+        ICommandSender sender;
+
+        @Override
+        public void run() {
+            World world = sender.getEntityWorld();
+            QueryableShipData data = ValkyrienUtils.getQueryableData(world);
+            data.setDebug();
         }
     }
 

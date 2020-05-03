@@ -35,6 +35,7 @@ public class QueryableShipData implements Iterable<ShipData> {
 
     // The key used to store/read the allShips collection from nbt.
     private static final String NBT_STORAGE_KEY = ValkyrienSkiesMod.MOD_ID + "QueryableShipDataNBT";
+    public static boolean debug = false;
     // Where every ship data instance is stored, regardless if the corresponding PhysicsObject is
     // loaded in the World or not.
     private ConcurrentIndexedCollection<ShipData> allShips = new ConcurrentIndexedCollection<>();
@@ -48,8 +49,14 @@ public class QueryableShipData implements Iterable<ShipData> {
     /**
      * {@link ValkyrienUtils#getQueryableData(World)}
      */
+
+
     public static QueryableShipData get(World world) {
         return ValkyrienUtils.getQueryableData(world);
+    }
+
+    public void setDebug() {
+        debug = !debug;
     }
     
     /**
@@ -206,8 +213,10 @@ public class QueryableShipData implements Iterable<ShipData> {
         Output output = new Output(1024, -1);
         kryo.writeObject(output, allShips);
         compound.setByteArray(NBT_STORAGE_KEY, output.getBuffer());
+        if (debug) {
+            System.out.println("Price of write: " + (System.currentTimeMillis() - start) + "ms");
+        }
 
-        System.out.println("Price of write: " + (System.currentTimeMillis() - start) + "ms");
 
         return compound;
     }
